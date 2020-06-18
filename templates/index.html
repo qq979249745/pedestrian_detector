@@ -1,0 +1,360 @@
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <link rel="icon" href="/static/favicon.ico" type="image" sizes="16x16">
+    <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/css/fontawesome/fontawesome.css">
+    <link rel="stylesheet" href="/static/css/bootstrap-toggle.min.css">
+    <link rel="stylesheet" href="/static/css/fontawesome/solid.css">
+    <script src="/static/js/jquery-3.5.0.min.js"></script>
+    <title>跑在浏览器的行人检测</title>
+</head>
+<body>
+<main role="main" class="container">
+    <div class="starter-template">
+        <h1 id="h_title">行人检测</h1>
+        <p class="lead" id="description">运行在您浏览器里面的行人检测</p>
+        <div class="alert alert-warning d-block d-md-none"><small>推荐使用电脑浏览器访问本网页。</small>
+        </div>
+        <div class="alert alert-warning d-block d-md-none">
+            <small>如果您使用的iOS设备，推荐使用safari浏览器，因为其他浏览器获取不了摄像头录制视频权限。</small></div>
+    </div>
+    <div class=" bg-light  text-center" id="ai_container"
+         style=" border-radius:30px; margin:0 auto; padding-bottom: 20px;">
+
+        <div class="row" style=" margin:0 auto; padding-top: 20px;">
+            <div class="col-9 bg-light" id="canvas_container">
+                <!-- 画面显示canvas -->
+                <canvas id="canvas_show" style="max-width: 100%;
+                  background-color:rgb(141, 103, 103); margin: 0 auto -7px -20px;border-radius: 10px;min-height: 100%;max-height: 600px;" width="800" height="600" >
+                </canvas>
+            </div>
+
+            <div class="col-3  bg-dark" id="img_region"
+                 style="border-radius: 10px; height: 600px; max-height: 600px">
+                <div class="row text-center"
+                     style=" height:15%; display:flex; align-items: center; justify-content: center ">
+                    <div style="text-align:center; margin:0 auto; width:90%">
+                        <video ></video>
+                    </div>
+                </div>
+
+                <div class="row text-center"
+                     style="margin-top:30%; height:15%; display:flex; align-items: center; justify-content: center ">
+                    <div style="text-align:center; margin:0 auto; width:90%">
+                        <button class="btn btn-default  btn-block btn-font text-center" id="openCameraBt" onclick="startVideo(video);">
+                            <i class="fas fa-camera fa-2x" style="display: block; color:dodgerblue;"></i>
+                            <span class="text-white">打开摄像头</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="row text-center"
+                     style="margin-top:10%; height:15%; display:flex; align-items: center; justify-content: center ">
+                    <div style="text-align:center; margin:0 auto; width:90%">
+                        <button class="btn btn-default btn-block btn-font"
+                                style="margin: 0 auto; background-color: inherit" onclick="startVideo(video,true);">
+                            <i class="fas fa-sync-alt fa-2x" style="display: block; color:dodgerblue;"></i>
+                            <span class="text-white">切换前后摄像头</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="row text-center"
+                     style="margin-top:10%; height:15%; display:flex; align-items: center; justify-content: center ">
+                    <div style="text-align:center; margin:0 auto; width:90%">
+                        <button class="btn btn-default btn-block btn-font"
+                                style="margin: 0 auto; background-color: inherit" onclick="stopVideo(video);play=false;">
+                            <i class="fas fa-times-circle fa-2x" style="display: block; color:dodgerblue;"></i>
+                            <span class="text-white">关闭摄像头</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="row text-center"
+                     style="margin-top:10%; height:15%; display:flex; align-items: center; justify-content: center ">
+                    <div style="text-align:center; margin:0 auto; width:90%">
+                        <button class="btn btn-default btn-block btn-font"
+                                style="margin: 0 auto; background-color: inherit" id="saveImgBt">
+                            <i class="fas fa-file-download fa-2x" style="display: block; color:dodgerblue;"></i>
+                            <span class="text-white">保存图片</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="row bg-dark p-3" style="margin: 10px auto 0; border-radius:15px">
+            <div class="col-3">
+                <div class="switch switch-large">
+                    <span class="text-light">img_size</span>
+                    <input type="number" class="form-control" id="img_size" value="416">
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="switch switch-large">
+                    <span class="text-light">conf_thres</span>
+                    <input type="number" class="form-control" id="conf_thres" value="0.5">
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="switch switch-large">
+                    <span class="text-light">iou_thres</span>
+                    <input type="number" class="form-control" id="iou_thres" value="0.5">
+                </div>
+            </div>
+            <div class="col-3">
+                <div class="switch switch-large">
+                    <span class="text-light">weights</span>
+                    <select class="form-control" id="weights">
+                        <option selected value="1">anchors聚类MR15.3%</option>
+                        <option value="2">anchors聚类+SE模块MR15.8%</option>
+                        <option value="3">anchors聚类+SPP MR13%</option>
+                        <option value="4">官网yolov3版本</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="row"
+             style="width:100%; margin: 10px auto 0;padding-top: 10px; background-color:#33CC99; border-radius:15px">
+            <div class=" col-12">
+                <h4>请选择视频或图片</h4>
+            </div>
+            <div class="col-12 col-sm-4 mb-3">
+                <div class="input-group">
+                    <div class="custom-file" style="text-align:left">
+                        <input type="file" class="custom-file-input" accept="video/*" id="videoFileUploadInput"
+                               placeholder="选择视频" onchange="uploadVideo()">
+                        <label class="custom-file-label" for="videoFileUploadInput">选择视频</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-sm-4">
+                <div class="input-group">
+                    <div class="custom-file" style="text-align:left">
+                        <input type="file" class="custom-file-input" accept="image/*" id="imgFileUploadInput"
+                               placeholder="选择图片" onchange="uploadImg()">
+                        <label class="custom-file-label" for="imgFileUploadInput">选择图片</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-sm-4">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="local_file" placeholder="输入本地视频路径">
+                    <div class="input-group-append">
+                        <button class="btn btn-outline-secondary" id="local_file_btn" type="button">确定</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<canvas id="tempCan" style="display: none"></canvas>
+<script src="/static/js/basicFunction.js"></script>
+<script>
+    const contentImg = new Image();
+    const can=$("#canvas_show")[0];
+    const ctx = can.getContext("2d");
+    const tempCan=$("#tempCan")[0];
+    const tempCtx = tempCan.getContext("2d");
+    contentImg.onload = function (img) {
+        ctx.clearRect(0, 0, can.width, can.height);
+        //ctx.drawImage(contentImg, 0, (can.height-contentImg.height*can.width/contentImg.width)/2,can.width, contentImg.height*can.width/contentImg.width);
+        cords = calculateLocationInCanvas(can.width,
+            can.height, contentImg.width, contentImg.height);
+        ctx.drawImage(contentImg , cords[0], cords[1], cords[2], cords[3]);
+    };
+    let ws;
+    let play=false;
+    const video=$('video')[0];
+    function myWebSocket() {
+        if ("WebSocket" in window) {
+            const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
+            ws = new WebSocket(ws_scheme + '://' + window.location.host + "/path/");
+            ws.onopen = function () {
+                ws.send(JSON.stringify({"msg":"测试发送数据"}));
+            };
+            ws.onmessage = function (evt) {
+                const received_msg = evt.data;
+                if (typeof (evt.data) != "string") {
+                    contentImg.src = window.URL.createObjectURL(received_msg);
+                    if(play){
+                        sendVideo();
+                    }
+                }else {
+                    let data=JSON.parse(received_msg);
+                    console.log(data);
+                    if(data['local_file']===1){
+                        ws.send($("#imgFileUploadInput")[0].files[0]);
+                    }else if(data['local_file']===2){
+                        let file=$("#videoFileUploadInput")[0].files[0];
+                        if(file.name.split('.')[1]==="seq"){
+                            ws.send(file);
+                        }else {
+                            video.src=URL.createObjectURL($("#videoFileUploadInput")[0].files[0]);
+                            video.play();
+                        }
+                    }
+                }
+            };
+            ws.onclose = function () {
+                alert("连接已关闭...");
+            };
+        } else {
+            alert("您的浏览器不支持 WebSocket!");
+        }
+    }
+    myWebSocket();
+    function sendConfig(local_file='1') {
+        let img_size=parseInt($('#img_size').val());
+        if(img_size%32!==0||img_size<0){
+            alert("img_size必须是32的倍数");
+            return false
+        }
+        let conf_thres=parseFloat($('#conf_thres').val());
+        if(conf_thres<0||conf_thres>1){
+            alert("conf_thres必须在0到1之间");
+            return false
+        }
+        let iou_thres=parseFloat($('#iou_thres').val());
+        if(iou_thres<0||iou_thres>1){
+            alert("iou_thres必须在0到1之间");
+            return false
+        }
+        let config={
+            "local_file":local_file,
+            "img_size":img_size,
+            "conf_thres":conf_thres,
+            "iou_thres":iou_thres,
+            "weights":parseInt($('#weights').val()),
+        };
+        config=JSON.stringify(config);
+        console.log(config);
+        ws.send(config);
+    }
+    function uploadImg() {
+        if ($("#imgFileUploadInput").val() !== "") {
+            sendConfig(1);
+        }
+    }
+
+    function uploadVideo() {
+        if ($("#videoFileUploadInput").val() !== "") {
+            sendConfig(2);
+        }
+    }
+    function sendVideo(){
+        tempCtx.drawImage(video,0,0,tempCan.width,tempCan.height);
+        const dataurl = tempCan.toDataURL('image/png'); //base64图片数据
+        let arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+            bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+        while(n--){
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        const obj = new Blob([u8arr], {type: mime});
+        ws.send(obj);
+    }
+    video.addEventListener('canplay', function () {
+        tempCan.width=this.videoWidth;
+        tempCan.height=this.videoHeight;
+        video.width=200;
+        video.height=150;
+        video.controls="controls";
+    });
+    video.addEventListener('play',function() {
+        play=true;
+        sendVideo();
+    },false);
+    video.addEventListener('pause',function() {play=false;},false);
+    video.addEventListener('ended',function() {play=false;},false);
+
+
+    $('#local_file_btn').click(() => {
+        let text=$('#local_file_btn').text();
+        console.log(text);
+        if(text==='确定'){
+            if ($("#local_file").val() !== "") {
+                sendConfig($("#local_file").val());
+            }
+            $('#local_file_btn').text('停止');
+        }else {
+            $('#local_file_btn').text('确定');
+            let config={
+                "stop":'true'
+            };
+            config=JSON.stringify(config);
+            ws.send(config);
+        }
+
+    });
+
+
+
+
+    $('#saveImgBt').click(() => {
+        let downloadLink = document.createElement("a");
+        downloadLink.download = 'person.png';
+        downloadLink.href = can.toDataURL("image/png");
+        downloadLink.click();
+        downloadLink.remove();
+    });
+
+</script>
+<div class="container">
+    <h6>浏览器兼容性</h6>
+    <table class="table table-responsive table-condensed">
+        <thead class="thead-light">
+        <tr>
+            <th scope="col"></th>
+            <th scope="col">Chrome</th>
+            <th scope="col">Safari</th>
+            <th scope="col">Firefox</th>
+            <th scope="col">补充</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <th scope="row">Windows</th>
+            <td>No</td>
+            <td>无</td>
+            <td>Yes</td>
+            <td>支持360安全浏览器、猎豹安全浏览器、2345加速浏览器、百度浏览器的<b>极速模式</b>，请不要选择兼容模式。其他浏览器待测试</td>
+        </tr>
+        <tr>
+            <th scope="row">安卓</th>
+            <td>Yes</td>
+            <td>无</td>
+            <td>Yes</td>
+            <td>安卓系统各浏览器支持完美</td>
+        </tr>
+        <tr>
+            <th scope="row">iOS</th>
+            <td>No</td>
+            <td>Yes</td>
+            <td>No</td>
+            <td>iOS只对Safari浏览器支持较好</td>
+        </tr>
+        <tr>
+            <th scope="row">MacOS</th>
+            <td>Yes</td>
+            <td>Yes</td>
+            <td>Yes</td>
+            <td>MacOS系统各浏览器支持完美</td>
+        </tr>
+        <tr>
+            <th scope="row">Ubuntu等Linux系统</th>
+            <td>Yes</td>
+            <td>Yes</td>
+            <td>Yes</td>
+            <td>Linux系统各浏览器支持完美</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>
